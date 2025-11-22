@@ -25,7 +25,7 @@
     margin:0;
     padding:25px;
     color:var(--text-primary);
-    line-height: 1.6; /* Melhora a legibilidade geral e ajuda a evitar corte */
+    line-height: 1.6;
     overflow-x: hidden;
   }
   .container{max-width:950px;margin:0 auto}
@@ -72,7 +72,7 @@
     font-size:15px;
     background:#fff;
     transition:border-color 0.2s, box-shadow 0.2s;
-    line-height: 1.5; /* Essencial para não cortar a letra no PDF */
+    line-height: 1.5;
   }
   input:focus,textarea:focus{
     border-color:var(--accent);
@@ -93,10 +93,10 @@
     overflow:hidden;
   }
   th,td{
-    padding:12px 10px; /* Mais espaço para respirar */
+    padding:12px 10px;
     text-align:left;
     border:none;
-    line-height: 1.5; /* Essencial para não cortar a letra no PDF */
+    line-height: 1.5;
   }
   th{
     background:#f1f5f9;
@@ -144,7 +144,7 @@
     box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);
   }
 
-  /* Galeria de Fotos */
+  /* Foto - MÚLTIPLAS FOTOS */
   .photo-box{
     border:2px dashed var(--border);
     padding:25px;
@@ -152,32 +152,20 @@
     text-align:center;
     background:#fff;
   }
-  #photoPreviewContainer {
+  #photo-preview-container {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
     justify-content: center;
     margin-top: 20px;
   }
-  .photo-wrapper {
-    position: relative;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 5px;
-    background: #f9fafb;
-  }
   .preview-img {
-    max-width:200px; /* Tamanho fixo para a visualização */
-    max-height:150px;
-    object-fit:contain;
-    display: block;
-  }
-  .photo-filename {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-align: center;
-    margin-top: 5px;
-    word-break: break-all;
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 3px solid #fff;
   }
 
   /* Botões de Ação */
@@ -218,8 +206,7 @@
     label{color:#000;font-size:10pt}
     .btn-pdf, .btn-whatsapp, .toggle, .photo-box input[type=file]{display:none}
     .photo-box{border:none;padding:0;text-align:left}
-    #photoPreviewContainer { justify-content: flex-start; }
-    .preview-img{max-width:250px;max-height:180px;margin-top:10px}
+    .preview-img{max-width:250px;height:auto;margin-top:10px}
     table{border:1px solid #000;font-size:10pt}
     th, td{border:1px solid #000;padding:6px; line-height: 1.3;}
     th{background:#eee !important; color: #000 !important;}
@@ -311,12 +298,13 @@
       <textarea id="observacoes" placeholder="Escreva observações ou manutenção necessária..."></textarea>
     </div>
 
-    <!-- FOTOS DO VEÍCULO -->
-    <div class="card">
+    <!-- FOTO DO VEÍCULO -->
+    <div class="card" id="photo-card">
       <div class="title">Fotos do Veículo</div>
       <div class="photo-box">
         <input type="file" id="photoInput" accept="image/*" multiple />
-        <div id="photoPreviewContainer"></div>
+        <div id="photoName" class="small" style="margin-top:8px">Nenhuma foto selecionada</div>
+        <div id="photo-preview-container"></div>
       </div>
     </div>
 
@@ -380,39 +368,32 @@
   }
   enableTableSelection('tblPortaria'); enableTableSelection('tblExped');
 
-  /***************** Galeria de Fotos *****************/
+  /***************** Preview de Múltiplas Fotos *****************/
   const photoInput = document.getElementById('photoInput');
-  const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+  const photoPreviewContainer = document.getElementById('photo-preview-container');
+  const photoName = document.getElementById('photoName');
 
   photoInput.addEventListener('change', (e) => {
-    photoPreviewContainer.innerHTML = ''; // Limpa previews anteriores
-    const files = Array.from(e.target.files);
-
-    if (files.length === 0) {
-      photoPreviewContainer.innerHTML = '<p class="small">Nenhuma foto selecionada</p>';
-      return;
+    photoPreviewContainer.innerHTML = '';
+    const files = e.target.files;
+    if (files.length > 0) {
+      photoName.textContent = `${files.length} foto(s) selecionada(s)`;
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = document.createElement('img');
+          img.src = event.target.result;
+          img.className = 'preview-img';
+          photoPreviewContainer.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    } else {
+      photoName.textContent = 'Nenhuma foto selecionada';
     }
-
-    files.forEach(file => {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'photo-wrapper';
-
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      img.className = 'preview-img';
-      img.alt = file.name;
-
-      const filename = document.createElement('div');
-      filename.className = 'photo-filename';
-      filename.textContent = file.name;
-
-      wrapper.appendChild(img);
-      wrapper.appendChild(filename);
-      photoPreviewContainer.appendChild(wrapper);
-    });
   });
 
-  /***************** Gerar PDF *****************/
+  /***************** Gerar PDF - CORRIGIDO *****************/
   document.getElementById('btnPdf').addEventListener('click', async (e)=>{ e.preventDefault(); await generatePdf(); });
 
   async function generatePdf() {
@@ -420,6 +401,7 @@
     try {
       if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { throw new Error("Bibliotecas não carregadas. Use um servidor local."); }
 
+      // Preencher valores para impressão
       document.querySelectorAll('input, textarea').forEach(input => { if (input.type !== 'file' && input.type !== 'hidden' && input.type !== 'tel') { input.setAttribute('value', input.value); } });
       document.getElementById('val5s-print').textContent = document.getElementById('val5s').value ? `5S: ${document.getElementById('val5s').value}` : '';
       document.querySelectorAll('.selectable').forEach(cell => {
@@ -429,67 +411,69 @@
         } else { cell.removeAttribute('data-print-value'); }
       });
 
-      const content = document.getElementById('content'); if (!content) { throw new Error("Elemento #content não encontrado."); }
-
-      // --- CORREÇÃO PRINCIPAL: CONVERTE TODAS AS IMAGENS LOCAIS ANTES DE GERAR O PDF ---
-      const previewImages = document.querySelectorAll('#photoPreviewContainer .preview-img');
-      const originalSrcs = [];
-      const conversionPromises = Array.from(previewImages).map(async (img, index) => {
+      const photoPreviewContainer = document.getElementById('photo-preview-container');
+      const previewImages = Array.from(photoPreviewContainer.querySelectorAll('.preview-img'));
+      
+      // 1. Converter imagens para Data URL para poderem ser usadas no PDF
+      const imageDataUrls = [];
+      for (const img of previewImages) {
         if (img.src.startsWith('blob:')) {
-          originalSrcs[index] = img.src;
-          try {
-            const blob = await fetch(img.src).then(r => r.blob());
-            img.src = await new Promise(resolve => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            });
-          } catch (e) {
-            console.warn("Não foi possível converter a imagem para o PDF.", e);
-            img.style.display = 'none';
-          }
+          const blob = await fetch(img.src).then(r => r.blob());
+          const dataUrl = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          imageDataUrls.push(dataUrl);
+        } else {
+          imageDataUrls.push(img.src);
         }
-      });
-      await Promise.all(conversionPromises);
-
-      const canvas = await html2canvas(content, { scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: '#ffffff' });
-      
-      // Restaura as URLs originais após a captura
-      previewImages.forEach((img, index) => {
-        if (originalSrcs[index]) {
-          img.src = originalSrcs[index];
-          img.style.display = 'block';
-        }
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
-      
-      // --- CORREÇÃO PRINCIPAL: MELHOR LÓGICA DE PAGINAÇÃO ---
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      // Preenche a largura da página e calcula a altura proporcional
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // Adiciona a primeira página
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      // Adiciona páginas subsequentes se o conteúdo for maior que uma página
-      while (heightLeft > 0) {
-        position = -heightLeft;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
       }
 
+      // 2. Esconder o container de fotos para não aparecer na primeira página
+      photoPreviewContainer.style.display = 'none';
+
+      // 3. Capturar o conteúdo do formulário (sem as fotos)
+      const content = document.getElementById('content');
+      const formCanvas = await html2canvas(content, { scale: 2, backgroundColor: '#ffffff' });
+      
+      // 4. Mostrar o container de fotos novamente na tela
+      photoPreviewContainer.style.display = 'flex';
+
+      // 5. Criar o PDF e adicionar a primeira página (o formulário)
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const formImgHeight = (formCanvas.height * pdfWidth) / formCanvas.width;
+      pdf.addImage(formCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, formImgHeight);
+
+      // 6. Adicionar cada foto em uma nova página
+      if (imageDataUrls.length > 0) {
+        for (const imgUrl of imageDataUrls) {
+          pdf.addPage();
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          
+          const imgProps = pdf.getImageProperties(imgUrl);
+          const aspectRatio = imgProps.height / imgProps.width;
+          let imgWidth = pageWidth * 0.9; // Deixar uma pequena margem
+          let imgHeight = imgWidth * aspectRatio;
+
+          if (imgHeight > pageHeight * 0.9) {
+            imgHeight = pageHeight * 0.9;
+            imgWidth = imgHeight / aspectRatio;
+          }
+          
+          const x = (pageWidth - imgWidth) / 2;
+          const y = (pageHeight - imgHeight) / 2;
+          
+          pdf.addImage(imgUrl, 'PNG', x, y, imgWidth, imgHeight);
+        }
+      }
+      
       const nomeArquivo = `Checklist_Expedicao_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "_")}.pdf`;
       pdf.save(nomeArquivo);
+
     } catch (error) {
       console.error("ERRO DETALHADO AO GERAR PDF:", error);
       alert(`Ocorreu um erro ao gerar o PDF: ${error.message}\n\nVerifique o console (F12) para mais detalhes.`);
