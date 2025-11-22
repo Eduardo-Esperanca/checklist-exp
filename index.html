@@ -490,14 +490,18 @@
 
   /*********************************************** Função de Seleção de Tabela ***********************************************/
   function enableTableSelection(tableId){
-    const table = document.getElementById(tableId); if(!table) return;
+    const table = document.getElementById(tableId); 
+    if(!table) {
+      console.warn(`Tabela com ID "${tableId}" não encontrada.`);
+      return;
+    }
     const rows = Array.from(table.tBodies[0].rows);
     rows.forEach(row=>{
       const simCell = row.cells[2]; const naoCell = row.cells[3]; const naCell = row.cells[4];
       [simCell, naoCell, naCell].forEach(cell=>{
         cell.classList.add('selectable'); cell.tabIndex = 0; cell.setAttribute('role','button');
         
-        // CORREÇÃO: Usar 'function' em vez de '=>' para ter o 'this' correto
+        // Usar 'function' para que 'this' se refira ao elemento 'cell' clicado
         cell.addEventListener('click', function() {
           // Limpa outras células na linha
           [simCell, naoCell, naCell].forEach(c=>{ c.textContent = ''; c.classList.remove('sim','nao','na'); });
@@ -509,7 +513,6 @@
           if(this === naCell)  this.classList.add('na');
         });
         
-        // CORREÇÃO: Também para o keydown
         cell.addEventListener('keydown', function(e){ 
           if(e.key === 'Enter' || e.key === ' '){ 
             e.preventDefault(); 
@@ -519,11 +522,12 @@
       });
     });
   }
-  enableTableSelection('tblPortaria'); enableTableSelection('tblExped');
+  enableTableSelection('tblPortaria'); 
+  enableTableSelection('tblExped');
 
   /***************** Função para Redimensionar e Converter para Base64 *****************/
   function resizeImage(file, maxWidth, maxHeight) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
@@ -539,8 +543,10 @@
           const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
           resolve(resizedBase64);
         };
+        img.onerror = () => reject(new Error(`Falha ao carregar a imagem: ${file.name}`));
         img.src = event.target.result;
       };
+      reader.onerror = () => reject(new Error(`Falha ao ler o arquivo: ${file.name}`));
       reader.readAsDataURL(file);
     });
   }
@@ -571,12 +577,15 @@
   function addPhotoPreview(base64) {
     const item = document.createElement('div');
     item.className = 'photo-preview-item';
+    // A função removePhoto é chamada via onclick, então precisa estar no escopo global
     item.innerHTML = `<img src="${base64}" alt="Preview do documento" class="preview-img"><button class="remove-photo" onclick="removePhoto(this, '${base64}')">&times;</button>`;
     photoPreviewContainer.appendChild(item);
   }
 
-  function removePhoto(button, base64ToRemove) {
-    const item = button.parentElement; item.remove();
+  // CORREÇÃO: Anexar a função ao objeto window para garantir que seja encontrada pelo onclick
+  window.removePhoto = function(button, base64ToRemove) {
+    const item = button.parentElement; 
+    item.remove();
     photosData = photosData.filter(photo => photo !== base64ToRemove);
     const count = photosData.length;
     photoName.textContent = count > 0 ? `${count} documento(s) selecionado(s)` : 'Nenhum documento selecionado';
@@ -588,68 +597,192 @@
     let isValid = true;
     const requiredFields = ['data', 'transportadora', 'tipoVeiculo', 'placa', 'numeroLacre', 'horaChegada', 'horaInicio', 'doca', 'agrupamento', 'whatsappNumber', 'assinMotorista', 'assinConferente'];
     requiredFields.forEach(fieldId => {
-      const field = document.getElementById(fieldId); const errorMsg = document.getElementById(`${fieldId}-error`);
-      if (!field.value.trim()) { if (errorMsg) errorMsg.classList.add('show'); isValid = false; }
-      else { if (errorMsg) errorMsg.classList.remove('show'); }
+      const field = document.getElementById(fieldId); 
+      const errorMsg = document.getElementById(`${fieldId}-error`);
+      if (!field || !errorMsg) return; // Pula se o campo não existir
+
+      if (!field.value.trim()) { 
+        errorMsg.classList.add('show'); 
+        isValid = false; 
+      } else { 
+        errorMsg.classList.remove('show'); 
+      }
     });
-    const val5s = document.getElementById('val5s'); const error5s = document.getElementById('5s-error');
-    if (!val5s.value) { error5s.classList.add('show'); isValid = false; } else { error5s.classList.remove('show'); }
+    const val5s = document.getElementById('val5s'); 
+    const error5s = document.getElementById('5s-error');
+    if (!val5s.value) { 
+      error5s.classList.add('show'); 
+      isValid = false; 
+    } else { 
+      error5s.classList.remove('show'); 
+    }
     const tables = ['tblPortaria', 'tblExped'];
     tables.forEach(tableId => {
-      const table = document.getElementById(tableId); const rows = Array.from(table.tBodies[0].rows); let allSelected = true;
-      rows.forEach(row => { if (!row.querySelector('.selectable.sim, .selectable.nao, .selectable.na')) { allSelected = false; } });
-      const errorMsg = document.getElementById(tableId === 'tblPortaria' ? 'portaria-error' : 'expedicao-error');
-      if (!allSelected) { errorMsg.classList.add('show'); isValid = false; } else { errorMsg.classList.remove('show'); }
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const rows = Array.from(table.tBodies[0].rows); 
+      let allSelected = true;
+      rows.forEach(row => { 
+        if (!row.querySelector('.selectable.sim, .selectable.nao, .selectable.na')) { 
+          allSelected = false; 
+        } 
+      });
+      const errorMsgId = tableId === 'tblPortaria' ? 'portaria-error' : 'expedicao-error';
+      const errorMsg = document.getElementById(errorMsgId);
+      if (!allSelected) { 
+        errorMsg.classList.add('show'); 
+        isValid = false; 
+      } else { 
+        errorMsg.classList.remove('show'); 
+      }
     });
     return isValid;
   }
 
   /***************** Toast de Notificação *****************/
   function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast'); toast.textContent = message; toast.className = 'toast show';
-    if (type === 'error') toast.classList.add('error'); else if (type === 'warning') toast.classList.add('warning');
+    const toast = document.getElementById('toast'); 
+    toast.textContent = message; 
+    toast.className = 'toast show';
+    if (type === 'error') toast.classList.add('error'); 
+    else if (type === 'warning') toast.classList.add('warning');
     setTimeout(() => { toast.classList.remove('show'); }, 3000);
   }
 
   /***************** Salvar Dados Localmente *****************/
   function saveFormData() {
-    const formData = { data: document.getElementById('data').value, transportadora: document.getElementById('transportadora').value, tipoVeiculo: document.getElementById('tipoVeiculo').value, placa: document.getElementById('placa').value, numeroLacre: document.getElementById('numeroLacre').value, horaChegada: document.getElementById('horaChegada').value, horaInicio: document.getElementById('horaInicio').value, doca: document.getElementById('doca').value, agrupamento: document.getElementById('agrupamento').value, val5s: document.getElementById('val5s').value, obs5s: document.getElementById('obs5s').value, whatsappNumber: document.getElementById('whatsappNumber').value, observacoes: document.getElementById('observacoes').value, assinMotorista: document.getElementById('assinMotorista').value, assinConferente: document.getElementById('assinConferente').value, portaria: getTableData('tblPortaria'), expedicao: getTableData('tblExped'), photos: photosData };
-    localStorage.setItem('checklistData', JSON.stringify(formData));
+    // CORREÇÃO: Adicionar verificação para o localStorage
+    if (typeof Storage === "undefined") {
+      console.warn("LocalStorage não disponível. Dados não serão salvos.");
+      return;
+    }
+    try {
+      const formData = { 
+        data: document.getElementById('data').value, 
+        transportadora: document.getElementById('transportadora').value, 
+        tipoVeiculo: document.getElementById('tipoVeiculo').value, 
+        placa: document.getElementById('placa').value, 
+        numeroLacre: document.getElementById('numeroLacre').value, 
+        horaChegada: document.getElementById('horaChegada').value, 
+        horaInicio: document.getElementById('horaInicio').value, 
+        doca: document.getElementById('doca').value, 
+        agrupamento: document.getElementById('agrupamento').value, 
+        val5s: document.getElementById('val5s').value, 
+        obs5s: document.getElementById('obs5s').value, 
+        whatsappNumber: document.getElementById('whatsappNumber').value, 
+        observacoes: document.getElementById('observacoes').value, 
+        assinMotorista: document.getElementById('assinMotorista').value, 
+        assinConferente: document.getElementById('assinConferente').value, 
+        portaria: getTableData('tblPortaria'), 
+        expedicao: getTableData('tblExped'), 
+        photos: photosData 
+      };
+      localStorage.setItem('checklistData', JSON.stringify(formData));
+    } catch (e) {
+      console.error("Erro ao salvar dados no localStorage:", e);
+    }
   }
 
   function getTableData(tableId) {
-    const table = document.getElementById(tableId); const rows = Array.from(table.tBodies[0].rows); const data = [];
+    const table = document.getElementById(tableId); 
+    if (!table) return [];
+    const rows = Array.from(table.tBodies[0].rows); 
+    const data = [];
     rows.forEach(row => {
-      const description = row.cells[1].textContent.trim(); let status = 'N/A';
+      const description = row.cells[1].textContent.trim(); 
+      let status = 'N/A';
       const selectableCells = row.querySelectorAll('.selectable');
-      selectableCells.forEach(cell => { if (cell.textContent.trim() === 'X') { if (cell.classList.contains('sim')) status = 'Sim'; else if (cell.classList.contains('nao')) status = 'Não'; else if (cell.classList.contains('na')) status = 'N/A'; } });
+      selectableCells.forEach(cell => { 
+        if (cell.textContent.trim() === 'X') { 
+          if (cell.classList.contains('sim')) status = 'Sim'; 
+          else if (cell.classList.contains('nao')) status = 'Não'; 
+          else if (cell.classList.contains('na')) status = 'N/A'; 
+        } 
+      });
       data.push({ description, status });
     });
     return data;
   }
 
   function loadFormData() {
-    const savedData = localStorage.getItem('checklistData'); if (!savedData) return;
+    // CORREÇÃO: Adicionar verificação para o localStorage e validação de dados
+    if (typeof Storage === "undefined") {
+      console.warn("LocalStorage não disponível. Dados não serão carregados.");
+      return;
+    }
     try {
+      const savedData = localStorage.getItem('checklistData'); 
+      if (!savedData) return;
+      
       const formData = JSON.parse(savedData);
-      document.getElementById('data').value = formData.data || ''; document.getElementById('transportadora').value = formData.transportadora || ''; document.getElementById('tipoVeiculo').value = formData.tipoVeiculo || ''; document.getElementById('placa').value = formData.placa || ''; document.getElementById('numeroLacre').value = formData.numeroLacre || ''; document.getElementById('horaChegada').value = formData.horaChegada || ''; document.getElementById('horaInicio').value = formData.horaInicio || ''; document.getElementById('doca').value = formData.doca || ''; document.getElementById('agrupamento').value = formData.agrupamento || ''; document.getElementById('obs5s').value = formData.obs5s || ''; document.getElementById('whatsappNumber').value = formData.whatsappNumber || ''; document.getElementById('observacoes').value = formData.observacoes || ''; document.getElementById('assinMotorista').value = formData.assinMotorista || ''; document.getElementById('assinConferente').value = formData.assinConferente || '';
-      if (formData.val5s) { const buttons = document.querySelectorAll('#toggle5s button'); buttons.forEach(btn => { if (btn.dataset.value === formData.val5s) btn.click(); }); }
+      if (!formData || typeof formData !== 'object') {
+        console.warn("Dados salvos são inválidos. Limpando o storage.");
+        localStorage.removeItem('checklistData');
+        return;
+      }
+
+      document.getElementById('data').value = formData.data || ''; 
+      document.getElementById('transportadora').value = formData.transportadora || ''; 
+      document.getElementById('tipoVeiculo').value = formData.tipoVeiculo || ''; 
+      document.getElementById('placa').value = formData.placa || ''; 
+      document.getElementById('numeroLacre').value = formData.numeroLacre || ''; 
+      document.getElementById('horaChegada').value = formData.horaChegada || ''; 
+      document.getElementById('horaInicio').value = formData.horaInicio || ''; 
+      document.getElementById('doca').value = formData.doca || ''; 
+      document.getElementById('agrupamento').value = formData.agrupamento || ''; 
+      document.getElementById('obs5s').value = formData.obs5s || ''; 
+      document.getElementById('whatsappNumber').value = formData.whatsappNumber || ''; 
+      document.getElementById('observacoes').value = formData.observacoes || ''; 
+      document.getElementById('assinMotorista').value = formData.assinMotorista || ''; 
+      document.getElementById('assinConferente').value = formData.assinConferente || '';
+      
+      if (formData.val5s) { 
+        const buttons = document.querySelectorAll('#toggle5s button'); 
+        buttons.forEach(btn => { 
+          if (btn.dataset.value === formData.val5s) btn.click(); 
+        }); 
+      }
       if (formData.portaria) fillTableData('tblPortaria', formData.portaria);
       if (formData.expedicao) fillTableData('tblExped', formData.expedicao);
-      if (formData.photos && formData.photos.length > 0) { photosData = formData.photos; photoName.textContent = `${photosData.length} documento(s) selecionado(s)`; photoPreviewContainer.innerHTML = ''; photosData.forEach(base64 => { addPhotoPreview(base64); }); }
+      if (formData.photos && formData.photos.length > 0) { 
+        photosData = formData.photos; 
+        photoName.textContent = `${photosData.length} documento(s) selecionado(s)`; 
+        photoPreviewContainer.innerHTML = ''; 
+        photosData.forEach(base64 => { 
+          addPhotoPreview(base64); 
+        }); 
+      }
       showToast('Dados recuperados com sucesso!');
-    } catch (e) { console.error('Erro ao carregar dados:', e); showToast('Erro ao carregar dados salvos', 'error'); }
+    } catch (e) { 
+      console.error('Erro ao carregar dados:', e); 
+      showToast('Erro ao carregar dados salvos', 'error'); 
+    }
   }
 
   function fillTableData(tableId, data) {
-    const table = document.getElementById(tableId); const rows = Array.from(table.tBodies[0].rows);
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = Array.from(table.tBodies[0].rows);
     rows.forEach((row, index) => {
       if (data[index]) {
-        const status = data[index].status; const selectableCells = row.querySelectorAll('.selectable');
-        selectableCells.forEach(cell => { cell.textContent = ''; cell.classList.remove('sim', 'nao', 'na'); });
-        if (status === 'Sim') { row.cells[2].textContent = 'X'; row.cells[2].classList.add('sim'); }
-        else if (status === 'Não') { row.cells[3].textContent = 'X'; row.cells[3].classList.add('nao'); }
-        else if (status === 'N/A') { row.cells[4].textContent = 'X'; row.cells[4].classList.add('na'); }
+        const status = data[index].status; 
+        const selectableCells = row.querySelectorAll('.selectable');
+        selectableCells.forEach(cell => { 
+          cell.textContent = ''; 
+          cell.classList.remove('sim', 'nao', 'na'); 
+        });
+        if (status === 'Sim') { 
+          row.cells[2].textContent = 'X'; 
+          row.cells[2].classList.add('sim'); 
+        }
+        else if (status === 'Não') { 
+          row.cells[3].textContent = 'X'; 
+          row.cells[3].classList.add('nao'); 
+        }
+        else if (status === 'N/A') { 
+          row.cells[4].textContent = 'X'; 
+          row.cells[4].classList.add('na'); 
+        }
       }
     });
   }
@@ -657,37 +790,58 @@
   // Carregar dados ao iniciar a página
   window.addEventListener('DOMContentLoaded', () => {
     loadFormData();
-    document.querySelectorAll('input, textarea').forEach(element => { element.addEventListener('change', () => { saveFormData(); }); });
-    document.querySelectorAll('.selectable').forEach(cell => { cell.addEventListener('click', () => { setTimeout(saveFormData, 100); }); });
+    document.querySelectorAll('input, textarea').forEach(element => { 
+      element.addEventListener('change', saveFormData); 
+    });
+    document.querySelectorAll('.selectable').forEach(cell => { 
+      cell.addEventListener('click', () => { setTimeout(saveFormData, 100); }); 
+    });
   });
 
   /***************** Gerar PDF - ORDEM DAS PÁGINAS ALTERADA *****************/
-  document.getElementById('btnPdf').addEventListener('click', async (e)=>{ e.preventDefault(); if (!validateForm()) { showToast('Por favor, preencha todos os campos obrigatórios', 'error'); return; } await generatePdf(); });
+  document.getElementById('btnPdf').addEventListener('click', async (e)=>{ 
+    e.preventDefault(); 
+    if (!validateForm()) { 
+      showToast('Por favor, preencha todos os campos obrigatórios', 'error'); 
+      return; 
+    } 
+    await generatePdf(); 
+  });
 
   async function generatePdf() {
-    const btn = document.getElementById('btnPdf'); const originalText = btn.innerText; btn.disabled = true; btn.innerText = 'Gerando PDF...';
+    const btn = document.getElementById('btnPdf'); 
+    const originalText = btn.innerText; 
+    btn.disabled = true; 
+    btn.innerText = 'Gerando PDF...';
     try {
-      if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { throw new Error("Bibliotecas não carregadas. Use um servidor local."); }
+      // CORREÇÃO: Verificação mais robusta e inicialização do jsPDF
+      if (typeof html2canvas === 'undefined') {
+        throw new Error("Biblioteca html2canvas não carregada. Verifique sua conexão com a internet.");
+      }
+      if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+        throw new Error("Biblioteca jsPDF não carregada. Verifique sua conexão com a internet.");
+      }
       
-      // Prepara o DOM para a impressão
-      document.querySelectorAll('input, textarea').forEach(input => { if (input.type !== 'file' && input.type !== 'hidden' && input.type !== 'tel') { input.setAttribute('value', input.value); } });
-      const val5sPrintElement = document.getElementById('val5s-print');
-      if (val5sPrintElement) { val5sPrintElement.textContent = document.getElementById('val5s').value ? `5S: ${document.getElementById('val5s').value}` : ''; }
-      document.querySelectorAll('.selectable').forEach(cell => {
-        if (cell.textContent === 'X') {
-          const text = cell.classList.contains('sim') ? 'Sim' : cell.classList.contains('nao') ? 'Não' : cell.classList.contains('na') ? 'N/A' : '';
-          cell.setAttribute('data-print-value', text);
-        } else { cell.removeAttribute('data-print-value'); }
-      });
-
-      const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+      // CORREÇÃO: Inicialização do jsPDF de forma mais robusta
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       // --- Função auxiliar para capturar e adicionar uma seção ao PDF ---
-      const addSectionToPdf = async (elementId, pageTitle) => {
-        const element = document.getElementById(elementId); if (!element) return;
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true, allowTaint: false, logging: false, backgroundColor: '#ffffff',
+      const addSectionToPdf = async (elementId) => {
+        const element = document.getElementById(elementId); 
+        if (!element) {
+          console.warn(`Elemento com ID "${elementId}" não encontrado para o PDF.`);
+          return;
+        }
+        const canvas = await html2canvas(element, { 
+          scale: 2, 
+          useCORS: true, 
+          allowTaint: false, 
+          logging: false, 
+          backgroundColor: '#ffffff',
             onclone: (clonedDoc) => {
                 if (elementId === 'photo-content') {
                     const clonedContainer = clonedDoc.getElementById('photoPreviewContainer');
@@ -704,24 +858,42 @@
             }
         });
         const imgData = canvas.toDataURL('image/png');
-        const imgWidth = canvas.width; const imgHeight = canvas.height;
+        const imgWidth = canvas.width; 
+        const imgHeight = canvas.height;
         const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
         const imgX = (pdfWidth - imgWidth * ratio) / 2;
         const imgY = 0;
         pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
       };
 
+      // Prepara o DOM para a impressão
+      document.querySelectorAll('input[type="text"], input[type="time"], input[type="date"], textarea').forEach(input => { 
+        input.setAttribute('value', input.value); 
+      });
+      const val5sPrintElement = document.getElementById('val5s-print');
+      if (val5sPrintElement) { 
+        val5sPrintElement.textContent = document.getElementById('val5s').value ? `5S: ${document.getElementById('val5s').value}` : ''; 
+      }
+      document.querySelectorAll('.selectable').forEach(cell => {
+        if (cell.textContent === 'X') {
+          const text = cell.classList.contains('sim') ? 'Sim' : cell.classList.contains('nao') ? 'Não' : cell.classList.contains('na') ? 'N/A' : '';
+          cell.setAttribute('data-print-value', text);
+        } else { 
+          cell.removeAttribute('data-print-value'); 
+        }
+      });
+
       // Página 1: Conteúdo Principal
-      await addSectionToPdf('main-content', 'Checklist - Conteúdo Principal');
+      await addSectionToPdf('main-content');
       
       // Página 2: Assinaturas
       pdf.addPage();
-      await addSectionToPdf('signature-content', 'Checklist - Assinaturas');
+      await addSectionToPdf('signature-content');
       
       // Página 3: Fotos (se existirem)
       if (photosData.length > 0) {
         pdf.addPage();
-        await addSectionToPdf('photo-content', 'Checklist - Fotos');
+        await addSectionToPdf('photo-content');
       }
       
       const nomeArquivo = `Checklist_Expedicao_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "_")}.pdf`;
@@ -730,32 +902,80 @@
     } catch (error) {
       console.error("ERRO DETALHADO AO GERAR PDF:", error);
       showToast(`Ocorreu um erro ao gerar o PDF: ${error.message}`, 'error');
-    } finally { btn.disabled = false; btn.innerText = originalText; }
+    } finally { 
+      btn.disabled = false; 
+      btn.innerText = originalText; 
+    }
   }
 
   /***************** Enviar via WhatsApp *****************/
-  document.getElementById('btnWhatsapp').addEventListener('click', () => { if (!validateForm()) { showToast('Por favor, preencha todos os campos obrigatórios', 'error'); return; } shareViaWhatsApp(); });
+  document.getElementById('btnWhatsapp').addEventListener('click', () => { 
+    if (!validateForm()) { 
+      showToast('Por favor, preencha todos os campos obrigatórios', 'error'); 
+      return; 
+    } 
+    shareViaWhatsApp(); 
+  });
   function shareViaWhatsApp() {
-    const phoneInput = document.getElementById('whatsappNumber'); const phoneNumber = phoneInput.value.replace(/\D/g, '');
-    if (!phoneNumber) { showToast('Por favor, preencha o campo "WhatsApp de Contato" com o número de telefone (apenas números).', 'error'); phoneInput.focus(); return; }
-    const message = formatMessageForWhatsApp(); const encodedMessage = encodeURIComponent(message); const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`; window.open(whatsappUrl, '_blank'); showToast('Mensagem enviada via WhatsApp!');
+    const phoneInput = document.getElementById('whatsappNumber'); 
+    const phoneNumber = phoneInput.value.replace(/\D/g, '');
+    if (!phoneNumber) { 
+      showToast('Por favor, preencha o campo "WhatsApp de Contato" com o número de telefone (apenas números).', 'error'); 
+      phoneInput.focus(); 
+      return; 
+    } 
+    const message = formatMessageForWhatsApp(); 
+    const encodedMessage = encodeURIComponent(message); 
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`; 
+    window.open(whatsappUrl, '_blank'); 
+    showToast('Mensagem enviada via WhatsApp!');
   }
   function formatMessageForWhatsApp() {
-    let message = `*CHECKLIST DE VEÍCULO - EXPEDIÇÃO*\n\n`; message += `--- *DADOS GERAIS* ---\n`; message += `Data: ${document.getElementById('data').value || 'N/A'}\n`; message += `Transportadora: ${document.getElementById('transportadora').value || 'N/A'}\n`; message += `Tipo Veículo: ${document.getElementById('tipoVeiculo').value || 'N/A'}\n`; message += `Placa(s): ${document.getElementById('placa').value || 'N/A'}\n`; message += `Número de Lacre: ${document.getElementById('numeroLacre').value || 'N/A'}\n`; message += `Hora Chegada: ${document.getElementById('horaChegada').value || 'N/A'}\n`; message += `Hora na Doca: ${document.getElementById('horaInicio').value || 'N/A'}\n`; message += `Doca: ${document.getElementById('doca').value || 'N/A'}\n`; message += `Agrupamento: ${document.getElementById('agrupamento').value || 'N/A'}\n`; message += `5S: ${document.getElementById('val5s').value || 'N/A'}\n`; message += `Obs. 5S: ${document.getElementById('obs5s').value || 'N/A'}\n\n`;
-    message += `--- *VALIDAÇÃO DA EXPEDIÇÃO* ---\n`; message += getTableDataForWhatsApp('tblPortaria');
-    message += `--- *VALIDAÇÃO DO CONFERENTE* ---\n`; message += getTableDataForWhatsApp('tblExped');
-    message += `--- *OBSERVAÇÕES / MANUTENÇÃO* ---\n`; message += `${document.getElementById('observacoes').value || 'Nenhuma'}\n\n`;
-    message += `--- *ASSINATURAS* ---\n`; message += `Motorista: ${document.getElementById('assinMotorista').value || 'N/A'}\n`; message += `Conferente: ${document.getElementById('assinConferente').value || 'N/A'}\n`;
-    if (photosData.length > 0) { message += `\n--- *DOCUMENTOS* ---\n`; message += `Este checklist inclui ${photosData.length} documento(s) anexado(s) no PDF gerado.`; }
+    let message = `*CHECKLIST DE VEÍCULO - EXPEDIÇÃO*\n\n`; 
+    message += `--- *DADOS GERAIS* ---\n`; 
+    message += `Data: ${document.getElementById('data').value || 'N/A'}\n`; 
+    message += `Transportadora: ${document.getElementById('transportadora').value || 'N/A'}\n`; 
+    message += `Tipo Veículo: ${document.getElementById('tipoVeiculo').value || 'N/A'}\n`; 
+    message += `Placa(s): ${document.getElementById('placa').value || 'N/A'}\n`; 
+    message += `Número de Lacre: ${document.getElementById('numeroLacre').value || 'N/A'}\n`; 
+    message += `Hora Chegada: ${document.getElementById('horaChegada').value || 'N/A'}\n`; 
+    message += `Hora na Doca: ${document.getElementById('horaInicio').value || 'N/A'}\n`; 
+    message += `Doca: ${document.getElementById('doca').value || 'N/A'}\n`; 
+    message += `Agrupamento: ${document.getElementById('agrupamento').value || 'N/A'}\n`; 
+    message += `5S: ${document.getElementById('val5s').value || 'N/A'}\n`; 
+    message += `Obs. 5S: ${document.getElementById('obs5s').value || 'N/A'}\n\n`;
+    message += `--- *VALIDAÇÃO DA EXPEDIÇÃO* ---\n`; 
+    message += getTableDataForWhatsApp('tblPortaria');
+    message += `--- *VALIDAÇÃO DO CONFERENTE* ---\n`; 
+    message += getTableDataForWhatsApp('tblExped');
+    message += `--- *OBSERVAÇÕES / MANUTENÇÃO* ---\n`; 
+    message += `${document.getElementById('observacoes').value || 'Nenhuma'}\n\n`;
+    message += `--- *ASSINATURAS* ---\n`; 
+    message += `Motorista: ${document.getElementById('assinMotorista').value || 'N/A'}\n`; 
+    message += `Conferente: ${document.getElementById('assinConferente').value || 'N/A'}\n`;
+    if (photosData.length > 0) { 
+      message += `\n--- *DOCUMENTOS* ---\n`; 
+      message += `Este checklist inclui ${photosData.length} documento(s) anexado(s) no PDF gerado.`; 
+    }
     return message;
   }
   function getTableDataForWhatsApp(tableId) {
-    const table = document.getElementById(tableId); if (!table) return `Erro: Tabela com ID "${tableId}" não encontrada.\n\n`;
-    let tableText = ''; const rows = table.querySelectorAll('tbody tr');
+    const table = document.getElementById(tableId); 
+    if (!table) return `Erro: Tabela com ID "${tableId}" não encontrada.\n\n`;
+    let tableText = ''; 
+    const rows = table.querySelectorAll('tbody tr');
     rows.forEach(row => {
-      const descriptionCell = row.cells[1]; const description = descriptionCell ? descriptionCell.textContent.trim() : 'Descrição não encontrada';
-      let status = 'N/A'; const selectableCells = row.querySelectorAll('.selectable');
-      selectableCells.forEach(cell => { if (cell.textContent.trim() === 'X') { if (cell.classList.contains('sim')) status = 'Sim'; else if (cell.classList.contains('nao')) status = 'Não'; else if (cell.classList.contains('na')) status = 'N/A'; } });
+      const descriptionCell = row.cells[1]; 
+      const description = descriptionCell ? descriptionCell.textContent.trim() : 'Descrição não encontrada';
+      let status = 'N/A'; 
+      const selectableCells = row.querySelectorAll('.selectable');
+      selectableCells.forEach(cell => { 
+        if (cell.textContent.trim() === 'X') { 
+          if (cell.classList.contains('sim')) status = 'Sim'; 
+          else if (cell.classList.contains('nao')) status = 'Não'; 
+          else if (cell.classList.contains('na')) status = 'N/A'; 
+        } 
+      });
       tableText += `- ${description}: *${status}*\n`;
     });
     return tableText + '\n';
