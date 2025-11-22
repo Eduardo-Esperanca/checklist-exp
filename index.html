@@ -144,7 +144,7 @@
     box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);
   }
 
-  /* Foto */
+  /* Galeria de Fotos */
   .photo-box{
     border:2px dashed var(--border);
     padding:25px;
@@ -152,13 +152,32 @@
     text-align:center;
     background:#fff;
   }
-  .preview-img{
-    max-width:100%;
-    max-height:220px;
+  #photoPreviewContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .photo-wrapper {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px;
+    background: #f9fafb;
+  }
+  .preview-img {
+    max-width:200px; /* Tamanho fixo para a visualização */
+    max-height:150px;
     object-fit:contain;
-    border-radius:var(--radius);
-    margin-top:15px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    display: block;
+  }
+  .photo-filename {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 5px;
+    word-break: break-all;
   }
 
   /* Botões de Ação */
@@ -187,7 +206,6 @@
   .btn-whatsapp:hover{background:#128C7E; transform: translateY(-2px);}
   .action-buttons button:disabled{background:var(--na);cursor:not-allowed;box-shadow:none; transform: none;}
 
-
   /* Otimização para PDF/Impressão */
   @media print {
     body{background:#fff;padding:15px;font-size:11pt; line-height: 1.4;}
@@ -200,7 +218,8 @@
     label{color:#000;font-size:10pt}
     .btn-pdf, .btn-whatsapp, .toggle, .photo-box input[type=file]{display:none}
     .photo-box{border:none;padding:0;text-align:left}
-    .preview-img{max-width:250px;height:auto;margin-top:10px}
+    #photoPreviewContainer { justify-content: flex-start; }
+    .preview-img{max-width:250px;max-height:180px;margin-top:10px}
     table{border:1px solid #000;font-size:10pt}
     th, td{border:1px solid #000;padding:6px; line-height: 1.3;}
     th{background:#eee !important; color: #000 !important;}
@@ -252,7 +271,6 @@
     </div>
 
     <!-- VALIDAÇÃO DA PORTARIA -->
-    <!-- Esta tabela (id="tblPortaria") é usada para gerar a seção "VALIDAÇÃO DO CONFERENTE" no WhatsApp -->
     <div class="card">
       <div class="title">Validação do Conferente</div>
       <table id="tblPortaria" aria-label="Validação do Conferente">
@@ -267,7 +285,6 @@
     </div>
 
     <!-- VALIDAÇÃO DA EXPEDIÇÃO -->
-    <!-- Esta tabela (id="tblExped") é usada para gerar a seção "VALIDAÇÃO DA EXPEDIÇÃO" no WhatsApp -->
     <div class="card">
       <div class="title">Validação da Expedição</div>
       <table id="tblExped" aria-label="Validação da Expedição">
@@ -294,13 +311,12 @@
       <textarea id="observacoes" placeholder="Escreva observações ou manutenção necessária..."></textarea>
     </div>
 
-    <!-- FOTO DO VEÍCULO -->
+    <!-- FOTOS DO VEÍCULO -->
     <div class="card">
-      <div class="title">Foto do Veículo</div>
+      <div class="title">Fotos do Veículo</div>
       <div class="photo-box">
-        <input type="file" id="photoInput" accept="image/*" />
-        <div id="photoName" class="small" style="margin-top:8px">Nenhuma foto selecionada</div>
-        <img id="preview" class="preview-img" alt="" style="display:none" />
+        <input type="file" id="photoInput" accept="image/*" multiple />
+        <div id="photoPreviewContainer"></div>
       </div>
     </div>
 
@@ -364,14 +380,36 @@
   }
   enableTableSelection('tblPortaria'); enableTableSelection('tblExped');
 
-  /***************** Foto preview *****************/
-  const photoInput = document.getElementById('photoInput'); const previewImg = document.getElementById('preview'); const photoName = document.getElementById('photoName');
-  photoInput.addEventListener('change', (e)=>{
-    const f = e.target.files[0];
-    if(!f){ previewImg.style.display='none'; previewImg.src=''; photoName.textContent='Nenhuma foto selecionada'; return; }
-    photoName.textContent = f.name;
-    previewImg.src = URL.createObjectURL(f);
-    previewImg.style.display = 'block';
+  /***************** Galeria de Fotos *****************/
+  const photoInput = document.getElementById('photoInput');
+  const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+
+  photoInput.addEventListener('change', (e) => {
+    photoPreviewContainer.innerHTML = ''; // Limpa previews anteriores
+    const files = Array.from(e.target.files);
+
+    if (files.length === 0) {
+      photoPreviewContainer.innerHTML = '<p class="small">Nenhuma foto selecionada</p>';
+      return;
+    }
+
+    files.forEach(file => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'photo-wrapper';
+
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.className = 'preview-img';
+      img.alt = file.name;
+
+      const filename = document.createElement('div');
+      filename.className = 'photo-filename';
+      filename.textContent = file.name;
+
+      wrapper.appendChild(img);
+      wrapper.appendChild(filename);
+      photoPreviewContainer.appendChild(wrapper);
+    });
   });
 
   /***************** Gerar PDF *****************/
@@ -393,22 +431,63 @@
 
       const content = document.getElementById('content'); if (!content) { throw new Error("Elemento #content não encontrado."); }
 
-      const previewImg = document.getElementById('preview'); let originalImgSrc = null;
-      if (previewImg && previewImg.src && previewImg.src.startsWith('blob:')) {
-        originalImgSrc = previewImg.src;
-        try { const blob = await fetch(originalImgSrc).then(r => r.blob());
-          previewImg.src = await new Promise(resolve => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); });
-        } catch (e) { console.warn("Não foi possível converter a imagem para o PDF.", e); previewImg.style.display = 'none'; }
-      }
+      // --- CORREÇÃO PRINCIPAL: CONVERTE TODAS AS IMAGENS LOCAIS ANTES DE GERAR O PDF ---
+      const previewImages = document.querySelectorAll('#photoPreviewContainer .preview-img');
+      const originalSrcs = [];
+      const conversionPromises = Array.from(previewImages).map(async (img, index) => {
+        if (img.src.startsWith('blob:')) {
+          originalSrcs[index] = img.src;
+          try {
+            const blob = await fetch(img.src).then(r => r.blob());
+            img.src = await new Promise(resolve => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          } catch (e) {
+            console.warn("Não foi possível converter a imagem para o PDF.", e);
+            img.style.display = 'none';
+          }
+        }
+      });
+      await Promise.all(conversionPromises);
 
       const canvas = await html2canvas(content, { scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: '#ffffff' });
-      if (originalImgSrc) { previewImg.src = originalImgSrc; previewImg.style.display = 'block'; }
+      
+      // Restaura as URLs originais após a captura
+      previewImages.forEach((img, index) => {
+        if (originalSrcs[index]) {
+          img.src = originalSrcs[index];
+          img.style.display = 'block';
+        }
+      });
 
-      const imgData = canvas.toDataURL('image/png'); const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width; const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight); const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+      
+      // --- CORREÇÃO PRINCIPAL: MELHOR LÓGICA DE PAGINAÇÃO ---
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Preenche a largura da página e calcula a altura proporcional
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Adiciona a primeira página
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Adiciona páginas subsequentes se o conteúdo for maior que uma página
+      while (heightLeft > 0) {
+        position = -heightLeft;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
       const nomeArquivo = `Checklist_Expedicao_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "_")}.pdf`;
       pdf.save(nomeArquivo);
     } catch (error) {
@@ -478,7 +557,6 @@
       const descriptionCell = row.cells[1];
       const description = descriptionCell ? descriptionCell.textContent.trim() : 'Descrição não encontrada';
 
-      // CORREÇÃO: O status padrão agora é "N/A" se nada for selecionado.
       let status = 'N/A';
       const selectableCells = row.querySelectorAll('.selectable');
       selectableCells.forEach(cell => {
