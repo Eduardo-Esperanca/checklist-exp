@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Checklist de Veículo - Expedição</title>
+<style>
+  /* Variáveis de Cores e Estilos - TEMA AZUL */
+  :root{
+    --bg:#f8fafc; /* Fundo mais suave */
+    --card:#fff;
+    --accent:#2563eb; /* Azul profissional */
+    --ok:#2563eb; /* Azul para "Sim" */
+    --nok:#dc2626; /* Vermelho para "Não" */
+    --na:#6b7280; /* Cinza para "N/A" */
+    --text-primary:#1e293b;
+    --text-secondary:#475569;
+    --border:#e2e8f0;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);
+    margin:0;
+    padding:25px;
+    color:var(--text-primary);
+    line-height: 1.6; /* Melhora a legibilidade geral e ajuda a evitar corte */
+    overflow-x: hidden;
+  }
+  .container{max-width:950px;margin:0 auto}
+  h1{
+    margin:0 0 20px;
+    font-size:28px;
+    color:var(--accent);
+    border-bottom:3px solid var(--accent);
+    padding-bottom:10px;
+    font-weight: 700;
+  }
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:25px;
+    margin-bottom:25px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.06);
+    border:1px solid var(--border);
+  }
+  .title{
+    font-weight:700;
+    font-size:18px;
+    margin-bottom:20px;
+    color:var(--text-primary);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .title::before{
+    content:'';
+    display:inline-block;
+    width:5px;
+    height:22px;
+    background:var(--accent);
+    border-radius:3px;
+  }
+  .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase}
+  input[type=text],input[type=time],input[type=date],input[type=tel],select,textarea{
+    width:100%;
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    font-size:15px;
+    background:#fff;
+    transition:border-color 0.2s, box-shadow 0.2s;
+    line-height: 1.5; /* Essencial para não cortar a letra no PDF */
+  }
+  input:focus,textarea:focus{
+    border-color:var(--accent);
+    outline:none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  textarea{min-height:80px;resize:vertical}
+  .small{font-size:13px;color:var(--text-secondary)}
+
+  /* Estilos de Tabela */
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+    font-size:14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  th,td{
+    padding:12px 10px; /* Mais espaço para respirar */
+    text-align:left;
+    border:none;
+    line-height: 1.5; /* Essencial para não cortar a letra no PDF */
+  }
+  th{
+    background:#f1f5f9;
+    font-weight:700;
+    text-align:center;
+    border-bottom:2px solid var(--border);
+    color:var(--text-primary);
+  }
+  td{border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+  td.center{ text-align:center }
+
+  /* Estilos de Seleção (Sim/Não/N/A) */
+  .selectable{
+    cursor:pointer;
+    user-select:none;
+    text-align:center;
+    font-weight:700;
+    transition:background 0.2s, transform 0.1s;
+    border-radius: 6px;
+  }
+  .selectable:hover{background:#f1f5f9; transform: scale(1.05);}
+  .selectable.sim, .selectable.nao, .selectable.na { color:#fff; }
+  .selectable.sim { background:var(--ok); }
+  .selectable.nao { background:var(--nok); }
+  .selectable.na  { background:var(--na); }
+
+  /* 5S toggle */
+  .toggle { display:flex; gap:10px; }
+  .toggle button {
+    flex:1;
+    padding:12px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:#fff;
+    cursor:pointer;
+    font-weight:600;
+    transition:all 0.2s;
+  }
+  .toggle button:hover{background:#f1f5f9}
+  .toggle button.active {
+    background:var(--ok);
+    color:#fff;
+    border-color:var(--ok);
+    box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);
+  }
+
+  /* Foto */
+  .photo-box{
+    border:2px dashed var(--border);
+    padding:25px;
+    border-radius:var(--radius);
+    text-align:center;
+    background:#fff;
+  }
+  .preview-img{
+    max-width:100%;
+    max-height:220px;
+    object-fit:contain;
+    border-radius:var(--radius);
+    margin-top:15px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  /* Botões de Ação */
+  .action-buttons {
+    display: flex;
+    gap: 15px;
+    max-width:1100px;
+    margin: 0 auto;
+  }
+  .action-buttons button {
+    flex: 1;
+    display:block;
+    padding:18px;
+    color:#fff;
+    border:none;
+    border-radius:var(--radius);
+    font-weight:700;
+    font-size:20px;
+    cursor:pointer;
+    box-shadow:0 4px 20px rgba(0,0,0,0.15);
+    transition:background 0.2s, transform 0.1s;
+  }
+  .btn-pdf{background:var(--accent);}
+  .btn-pdf:hover{background:#1d4ed8; transform: translateY(-2px);}
+  .btn-whatsapp{background:#25D366;}
+  .btn-whatsapp:hover{background:#128C7E; transform: translateY(-2px);}
+  .action-buttons button:disabled{background:var(--na);cursor:not-allowed;box-shadow:none; transform: none;}
+
+
+  /* Otimização para PDF/Impressão */
+  @media print {
+    body{background:#fff;padding:15px;font-size:11pt; line-height: 1.4;}
+    .container{max-width:100%;margin:0}
+    .card{box-shadow:none;border:1px solid #ccc;padding:15px;margin-bottom:15px;page-break-inside:avoid}
+    h1{border-bottom:2px solid #000;color:#000; font-size: 20pt;}
+    .title::before{content:none}
+    .grid-2{gap:15px}
+    input, textarea, select{border:none;border-bottom:1px dashed #000;padding:4px 0;border-radius:0;background:none; line-height: 1.4;}
+    label{color:#000;font-size:10pt}
+    .btn-pdf, .btn-whatsapp, .toggle, .photo-box input[type=file]{display:none}
+    .photo-box{border:none;padding:0;text-align:left}
+    .preview-img{max-width:250px;height:auto;margin-top:10px}
+    table{border:1px solid #000;font-size:10pt}
+    th, td{border:1px solid #000;padding:6px; line-height: 1.3;}
+    th{background:#eee !important; color: #000 !important;}
+    .selectable.sim, .selectable.nao, .selectable.na { color:#000 !important; background:none !important; }
+    .selectable.sim::after{content:' (Sim)'; font-weight: normal;}
+    .selectable.nao::after{content:' (Não)'; font-weight: normal;}
+    .selectable.na::after{content:' (N/A)'; font-weight: normal;}
+    .selectable{cursor:default; user-select:text; text-align:left; font-weight:normal;}
+    .selectable:hover{background:none}
+    .print-value { display: block; font-weight: bold; margin-top: 5px; color: #000; }
+    .selectable[data-print-value]::after { content: attr(data-print-value); display: block; font-weight: bold; color: #000; }
+  }
+
+  /* Responsividade */
+  @media (max-width:800px){ .grid-2{grid-template-columns:1fr} .action-buttons { flex-direction: column; } }
+</style>
+</head>
+<body>
+  <div class="container" id="content">
+    <h1>CHECKLIST DE VEÍCULO - EXPEDIÇÃO</h1>
+
+    <!-- DADOS GERAIS -->
+    <div class="card">
+      <div class="title">Dados Gerais</div>
+      <div class="grid-2">
+        <div><label>Data</label><input type="date" id="data" /></div>
+        <div><label>Transportadora</label><input type="text" id="transportadora" placeholder="Digite a transportadora" /></div>
+        <div><label>Tipo Veículo</label><input type="text" id="tipoVeiculo" placeholder="Ex: Bitrem" /></div>
+        <div><label>Placa</label><input type="text" id="placa" placeholder="Ex: ABC1D23" /></div>
+        <div><label>Hora de Chegada</label><input type="time" id="horaChegada" /></div>
+        <div><label>Hora que encostou na Doca</label><input type="time" id="horaInicio" /></div>
+        <div><label>Doca</label><input type="text" id="doca" /></div>
+        <div><label>Agrupamento</label><input type="text" id="agrupamento" /></div>
+        <div>
+          <label>5S</label>
+          <div class="toggle" id="toggle5s">
+            <button type="button" data-value="Sim">Sim</button>
+            <button type="button" data-value="Não">Não</button>
+          </div>
+          <input type="hidden" id="val5s" value="" />
+          <div class="print-value" id="val5s-print"></div>
+        </div>
+        <div><label>Observação 5S</label><textarea id="obs5s" placeholder="Observação sobre o 5S"></textarea></div>
+        <div>
+          <label>WhatsApp de Contato</label>
+          <input type="tel" id="whatsappNumber" placeholder="Apenas números (ex: 5511912345678)" />
+        </div>
+      </div>
+    </div>
+
+    <!-- VALIDAÇÃO DA PORTARIA -->
+    <!-- Esta tabela (id="tblPortaria") é usada para gerar a seção "VALIDAÇÃO DO CONFERENTE" no WhatsApp -->
+    <div class="card">
+      <div class="title">Validação do Conferente</div>
+      <table id="tblPortaria" aria-label="Validação do Conferente">
+        <thead><tr><th>Item</th><th>Descrição</th><th class="center">Sim</th><th class="center">Não</th><th class="center">N/A</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>A carreta está vazia?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>2</td><td>Possui madeirite?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>3</td><td>Possui corda?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>4</td><td>Possui rede?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- VALIDAÇÃO DA EXPEDIÇÃO -->
+    <!-- Esta tabela (id="tblExped") é usada para gerar a seção "VALIDAÇÃO DA EXPEDIÇÃO" no WhatsApp -->
+    <div class="card">
+      <div class="title">Validação da Expedição</div>
+      <table id="tblExped" aria-label="Validação da Expedição">
+        <thead><tr><th>Item</th><th>Descrição</th><th class="center">Sim</th><th class="center">Não</th><th class="center">N/A</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Chave do veículo está no claviculário?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>2</td><td>Veículo com calço travando as rodas?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>3</td><td>Sider com 03 réguas por coluna?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>4</td><td>Conferente da transportadora acompanhando?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>5</td><td>Conferente conferiu a carga?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>6</td><td>Está limpo?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>7</td><td>Livre de mau odor?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>8</td><td>Em bom estado?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>9</td><td>Sem vazamento?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>10</td><td>Porta da doca travada?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+          <tr><td>11</td><td>Doca com iluminação correta?</td><td class="selectable"></td><td class="selectable"></td><td class="selectable"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- OBSERVAÇÕES / MANUTENÇÃO -->
+    <div class="card">
+      <div class="title">Observações / Manutenção</div>
+      <textarea id="observacoes" placeholder="Escreva observações ou manutenção necessária..."></textarea>
+    </div>
+
+    <!-- FOTO DO VEÍCULO -->
+    <div class="card">
+      <div class="title">Foto do Veículo</div>
+      <div class="photo-box">
+        <input type="file" id="photoInput" accept="image/*" />
+        <div id="photoName" class="small" style="margin-top:8px">Nenhuma foto selecionada</div>
+        <img id="preview" class="preview-img" alt="" style="display:none" />
+      </div>
+    </div>
+
+    <!-- ASSINATURAS -->
+    <div class="card">
+      <div class="title">Assinaturas</div>
+      <div class="grid-2">
+        <div><label>Assinatura Motorista:</label><input type="text" id="assinMotorista" placeholder="Nome / assinatura (texto)" /></div>
+        <div><label>Assinatura Conferente:</label><input type="text" id="assinConferente" placeholder="Nome / assinatura (texto)" /></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- botões de ação -->
+  <div class="action-buttons">
+    <button class="btn-pdf" id="btnPdf">📄 Gerar PDF</button>
+    <button class="btn-whatsapp" id="btnWhatsapp">📤 Enviar via WhatsApp</button>
+  </div>
+
+  <!-- dependências -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- scripts: toggles, seleção de tabela, foto e gerar PDF -->
+  <script>
+  /******************* 5S Toggle *******************/
+  (function(){
+    const toggle = document.getElementById('toggle5s');
+    if(toggle){
+      const buttons = Array.from(toggle.querySelectorAll('button'));
+      const inputHidden = document.getElementById('val5s');
+      buttons.forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          buttons.forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          inputHidden.value = btn.dataset.value;
+        });
+        btn.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); btn.click(); } });
+      });
+    }
+  })();
+
+  /*********************************************** Função de Seleção de Tabela ***********************************************/
+  function enableTableSelection(tableId){
+    const table = document.getElementById(tableId); if(!table) return;
+    const rows = Array.from(table.tBodies[0].rows);
+    rows.forEach(row=>{
+      const simCell = row.cells[2]; const naoCell = row.cells[3]; const naCell = row.cells[4];
+      [simCell, naoCell, naCell].forEach(cell=>{
+        cell.classList.add('selectable'); cell.tabIndex = 0; cell.setAttribute('role','button');
+        cell.addEventListener('click', ()=>{
+          [simCell, naoCell, naCell].forEach(c=>{ c.textContent = ''; c.classList.remove('sim','nao','na'); });
+          cell.textContent = 'X';
+          if(cell === simCell) cell.classList.add('sim');
+          if(cell === naoCell) cell.classList.add('nao');
+          if(cell === naCell)  cell.classList.add('na');
+        });
+        cell.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); cell.click(); } });
+      });
+    });
+  }
+  enableTableSelection('tblPortaria'); enableTableSelection('tblExped');
+
+  /***************** Foto preview *****************/
+  const photoInput = document.getElementById('photoInput'); const previewImg = document.getElementById('preview'); const photoName = document.getElementById('photoName');
+  photoInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(!f){ previewImg.style.display='none'; previewImg.src=''; photoName.textContent='Nenhuma foto selecionada'; return; }
+    photoName.textContent = f.name;
+    previewImg.src = URL.createObjectURL(f);
+    previewImg.style.display = 'block';
+  });
+
+  /***************** Gerar PDF *****************/
+  document.getElementById('btnPdf').addEventListener('click', async (e)=>{ e.preventDefault(); await generatePdf(); });
+
+  async function generatePdf() {
+    const btn = document.getElementById('btnPdf'); const originalText = btn.innerText; btn.disabled = true; btn.innerText = 'Gerando PDF...';
+    try {
+      if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { throw new Error("Bibliotecas não carregadas. Use um servidor local."); }
+
+      document.querySelectorAll('input, textarea').forEach(input => { if (input.type !== 'file' && input.type !== 'hidden' && input.type !== 'tel') { input.setAttribute('value', input.value); } });
+      document.getElementById('val5s-print').textContent = document.getElementById('val5s').value ? `5S: ${document.getElementById('val5s').value}` : '';
+      document.querySelectorAll('.selectable').forEach(cell => {
+        if (cell.textContent === 'X') {
+          const text = cell.classList.contains('sim') ? 'Sim' : cell.classList.contains('nao') ? 'Não' : cell.classList.contains('na') ? 'N/A' : '';
+          cell.setAttribute('data-print-value', text);
+        } else { cell.removeAttribute('data-print-value'); }
+      });
+
+      const content = document.getElementById('content'); if (!content) { throw new Error("Elemento #content não encontrado."); }
+
+      const previewImg = document.getElementById('preview'); let originalImgSrc = null;
+      if (previewImg && previewImg.src && previewImg.src.startsWith('blob:')) {
+        originalImgSrc = previewImg.src;
+        try { const blob = await fetch(originalImgSrc).then(r => r.blob());
+          previewImg.src = await new Promise(resolve => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); });
+        } catch (e) { console.warn("Não foi possível converter a imagem para o PDF.", e); previewImg.style.display = 'none'; }
+      }
+
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: '#ffffff' });
+      if (originalImgSrc) { previewImg.src = originalImgSrc; previewImg.style.display = 'block'; }
+
+      const imgData = canvas.toDataURL('image/png'); const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width; const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight); const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
+      const nomeArquivo = `Checklist_Expedicao_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "_")}.pdf`;
+      pdf.save(nomeArquivo);
+    } catch (error) {
+      console.error("ERRO DETALHADO AO GERAR PDF:", error);
+      alert(`Ocorreu um erro ao gerar o PDF: ${error.message}\n\nVerifique o console (F12) para mais detalhes.`);
+    } finally { btn.disabled = false; btn.innerText = originalText; }
+  }
+
+  /***************** Enviar via WhatsApp *****************/
+  document.getElementById('btnWhatsapp').addEventListener('click', () => { shareViaWhatsApp(); });
+
+  function shareViaWhatsApp() {
+    const phoneInput = document.getElementById('whatsappNumber');
+    const phoneNumber = phoneInput.value.replace(/\D/g, '');
+
+    if (!phoneNumber) {
+      alert('Por favor, preencha o campo "WhatsApp de Contato" com o número de telefone (apenas números).');
+      phoneInput.focus();
+      return;
+    }
+
+    const message = formatMessageForWhatsApp();
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+    window.open(whatsappUrl, '_blank');
+  }
+
+  function formatMessageForWhatsApp() {
+    let message = `*CHECKLIST DE VEÍCULO - EXPEDIÇÃO*\n\n`;
+    message += `--- *DADOS GERAIS* ---\n`;
+    message += `Data: ${document.getElementById('data').value || 'N/A'}\n`;
+    message += `Transportadora: ${document.getElementById('transportadora').value || 'N/A'}\n`;
+    message += `Tipo Veículo: ${document.getElementById('tipoVeiculo').value || 'N/A'}\n`;
+    message += `Placa: ${document.getElementById('placa').value || 'N/A'}\n`;
+    message += `Hora Chegada: ${document.getElementById('horaChegada').value || 'N/A'}\n`;
+    message += `Hora na Doca: ${document.getElementById('horaInicio').value || 'N/A'}\n`;
+    message += `Doca: ${document.getElementById('doca').value || 'N/A'}\n`;
+    message += `Agrupamento: ${document.getElementById('agrupamento').value || 'N/A'}\n`;
+    message += `5S: ${document.getElementById('val5s').value || 'N/A'}\n`;
+    message += `Obs. 5S: ${document.getElementById('obs5s').value || 'N/A'}\n\n`;
+
+    message += `--- *VALIDAÇÃO DO CONFERENTE* ---\n`;
+    message += getTableDataForWhatsApp('tblPortaria');
+
+    message += `--- *VALIDAÇÃO DA EXPEDIÇÃO* ---\n`;
+    message += getTableDataForWhatsApp('tblExped');
+
+    message += `--- *OBSERVAÇÕES / MANUTENÇÃO* ---\n`;
+    message += `${document.getElementById('observacoes').value || 'Nenhuma'}\n\n`;
+
+    message += `--- *ASSINATURAS* ---\n`;
+    message += `Motorista: ${document.getElementById('assinMotorista').value || 'N/A'}\n`;
+    message += `Conferente: ${document.getElementById('assinConferente').value || 'N/A'}\n`;
+
+    return message;
+  }
+
+  function getTableDataForWhatsApp(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return `Erro: Tabela com ID "${tableId}" não encontrada.\n\n`;
+
+    let tableText = '';
+    const rows = table.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+      const descriptionCell = row.cells[1];
+      const description = descriptionCell ? descriptionCell.textContent.trim() : 'Descrição não encontrada';
+
+      // CORREÇÃO: O status padrão agora é "N/A" se nada for selecionado.
+      let status = 'N/A';
+      const selectableCells = row.querySelectorAll('.selectable');
+      selectableCells.forEach(cell => {
+        if (cell.textContent.trim() === 'X') {
+          if (cell.classList.contains('sim')) status = 'Sim';
+          else if (cell.classList.contains('nao')) status = 'Não';
+          else if (cell.classList.contains('na')) status = 'N/A';
+        }
+      });
+
+      tableText += `- ${description}: *${status}*\n`;
+    });
+
+    return tableText + '\n';
+  }
+  </script>
+</body>
+</html>
