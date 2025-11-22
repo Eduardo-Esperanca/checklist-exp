@@ -25,7 +25,7 @@
     margin:0;
     padding:25px;
     color:var(--text-primary);
-    line-height: 1.6;
+    line-height: 1.6; /* Melhora a legibilidade geral e ajuda a evitar corte */
     overflow-x: hidden;
   }
   .container{max-width:950px;margin:0 auto}
@@ -72,7 +72,7 @@
     font-size:15px;
     background:#fff;
     transition:border-color 0.2s, box-shadow 0.2s;
-    line-height: 1.5;
+    line-height: 1.5; /* Essencial para não cortar a letra no PDF */
   }
   input:focus,textarea:focus{
     border-color:var(--accent);
@@ -93,10 +93,10 @@
     overflow:hidden;
   }
   th,td{
-    padding:12px 10px;
+    padding:12px 10px; /* Mais espaço para respirar */
     text-align:left;
     border:none;
-    line-height: 1.5;
+    line-height: 1.5; /* Essencial para não cortar a letra no PDF */
   }
   th{
     background:#f1f5f9;
@@ -144,7 +144,7 @@
     box-shadow:0 2px 8px rgba(37, 99, 235, 0.3);
   }
 
-  /* Foto - MÚLTIPLAS FOTOS */
+  /* Foto */
   .photo-box{
     border:2px dashed var(--border);
     padding:25px;
@@ -152,20 +152,13 @@
     text-align:center;
     background:#fff;
   }
-  #photo-preview-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 20px;
-  }
-  .preview-img {
-    max-width: 200px;
-    max-height: 200px;
-    object-fit: cover;
-    border-radius: var(--radius);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 3px solid #fff;
+  .preview-img{
+    max-width:100%;
+    max-height:220px;
+    object-fit:contain;
+    border-radius:var(--radius);
+    margin-top:15px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
   }
 
   /* Botões de Ação */
@@ -193,6 +186,7 @@
   .btn-whatsapp{background:#25D366;}
   .btn-whatsapp:hover{background:#128C7E; transform: translateY(-2px);}
   .action-buttons button:disabled{background:var(--na);cursor:not-allowed;box-shadow:none; transform: none;}
+
 
   /* Otimização para PDF/Impressão */
   @media print {
@@ -258,6 +252,7 @@
     </div>
 
     <!-- VALIDAÇÃO DA PORTARIA -->
+    <!-- Esta tabela (id="tblPortaria") é usada para gerar a seção "VALIDAÇÃO DO CONFERENTE" no WhatsApp -->
     <div class="card">
       <div class="title">Validação do Conferente</div>
       <table id="tblPortaria" aria-label="Validação do Conferente">
@@ -272,6 +267,7 @@
     </div>
 
     <!-- VALIDAÇÃO DA EXPEDIÇÃO -->
+    <!-- Esta tabela (id="tblExped") é usada para gerar a seção "VALIDAÇÃO DA EXPEDIÇÃO" no WhatsApp -->
     <div class="card">
       <div class="title">Validação da Expedição</div>
       <table id="tblExped" aria-label="Validação da Expedição">
@@ -299,12 +295,12 @@
     </div>
 
     <!-- FOTO DO VEÍCULO -->
-    <div class="card" id="photo-card">
-      <div class="title">Fotos do Veículo</div>
+    <div class="card">
+      <div class="title">Foto do Veículo</div>
       <div class="photo-box">
-        <input type="file" id="photoInput" accept="image/*" multiple />
+        <input type="file" id="photoInput" accept="image/*" />
         <div id="photoName" class="small" style="margin-top:8px">Nenhuma foto selecionada</div>
-        <div id="photo-preview-container"></div>
+        <img id="preview" class="preview-img" alt="" style="display:none" />
       </div>
     </div>
 
@@ -368,32 +364,17 @@
   }
   enableTableSelection('tblPortaria'); enableTableSelection('tblExped');
 
-  /***************** Preview de Múltiplas Fotos *****************/
-  const photoInput = document.getElementById('photoInput');
-  const photoPreviewContainer = document.getElementById('photo-preview-container');
-  const photoName = document.getElementById('photoName');
-
-  photoInput.addEventListener('change', (e) => {
-    photoPreviewContainer.innerHTML = '';
-    const files = e.target.files;
-    if (files.length > 0) {
-      photoName.textContent = `${files.length} foto(s) selecionada(s)`;
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = document.createElement('img');
-          img.src = event.target.result;
-          img.className = 'preview-img';
-          photoPreviewContainer.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
-    } else {
-      photoName.textContent = 'Nenhuma foto selecionada';
-    }
+  /***************** Foto preview *****************/
+  const photoInput = document.getElementById('photoInput'); const previewImg = document.getElementById('preview'); const photoName = document.getElementById('photoName');
+  photoInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(!f){ previewImg.style.display='none'; previewImg.src=''; photoName.textContent='Nenhuma foto selecionada'; return; }
+    photoName.textContent = f.name;
+    previewImg.src = URL.createObjectURL(f);
+    previewImg.style.display = 'block';
   });
 
-  /***************** Gerar PDF - CORRIGIDO *****************/
+  /***************** Gerar PDF *****************/
   document.getElementById('btnPdf').addEventListener('click', async (e)=>{ e.preventDefault(); await generatePdf(); });
 
   async function generatePdf() {
@@ -401,7 +382,6 @@
     try {
       if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') { throw new Error("Bibliotecas não carregadas. Use um servidor local."); }
 
-      // Preencher valores para impressão
       document.querySelectorAll('input, textarea').forEach(input => { if (input.type !== 'file' && input.type !== 'hidden' && input.type !== 'tel') { input.setAttribute('value', input.value); } });
       document.getElementById('val5s-print').textContent = document.getElementById('val5s').value ? `5S: ${document.getElementById('val5s').value}` : '';
       document.querySelectorAll('.selectable').forEach(cell => {
@@ -411,69 +391,26 @@
         } else { cell.removeAttribute('data-print-value'); }
       });
 
-      const photoPreviewContainer = document.getElementById('photo-preview-container');
-      const previewImages = Array.from(photoPreviewContainer.querySelectorAll('.preview-img'));
-      
-      // 1. Converter imagens para Data URL para poderem ser usadas no PDF
-      const imageDataUrls = [];
-      for (const img of previewImages) {
-        if (img.src.startsWith('blob:')) {
-          const blob = await fetch(img.src).then(r => r.blob());
-          const dataUrl = await new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-          imageDataUrls.push(dataUrl);
-        } else {
-          imageDataUrls.push(img.src);
-        }
+      const content = document.getElementById('content'); if (!content) { throw new Error("Elemento #content não encontrado."); }
+
+      const previewImg = document.getElementById('preview'); let originalImgSrc = null;
+      if (previewImg && previewImg.src && previewImg.src.startsWith('blob:')) {
+        originalImgSrc = previewImg.src;
+        try { const blob = await fetch(originalImgSrc).then(r => r.blob());
+          previewImg.src = await new Promise(resolve => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); });
+        } catch (e) { console.warn("Não foi possível converter a imagem para o PDF.", e); previewImg.style.display = 'none'; }
       }
 
-      // 2. Esconder o container de fotos para não aparecer na primeira página
-      photoPreviewContainer.style.display = 'none';
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: '#ffffff' });
+      if (originalImgSrc) { previewImg.src = originalImgSrc; previewImg.style.display = 'block'; }
 
-      // 3. Capturar o conteúdo do formulário (sem as fotos)
-      const content = document.getElementById('content');
-      const formCanvas = await html2canvas(content, { scale: 2, backgroundColor: '#ffffff' });
-      
-      // 4. Mostrar o container de fotos novamente na tela
-      photoPreviewContainer.style.display = 'flex';
-
-      // 5. Criar o PDF e adicionar a primeira página (o formulário)
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const formImgHeight = (formCanvas.height * pdfWidth) / formCanvas.width;
-      pdf.addImage(formCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, formImgHeight);
-
-      // 6. Adicionar cada foto em uma nova página
-      if (imageDataUrls.length > 0) {
-        for (const imgUrl of imageDataUrls) {
-          pdf.addPage();
-          const pageWidth = pdf.internal.pageSize.getWidth();
-          const pageHeight = pdf.internal.pageSize.getHeight();
-          
-          const imgProps = pdf.getImageProperties(imgUrl);
-          const aspectRatio = imgProps.height / imgProps.width;
-          let imgWidth = pageWidth * 0.9; // Deixar uma pequena margem
-          let imgHeight = imgWidth * aspectRatio;
-
-          if (imgHeight > pageHeight * 0.9) {
-            imgHeight = pageHeight * 0.9;
-            imgWidth = imgHeight / aspectRatio;
-          }
-          
-          const x = (pageWidth - imgWidth) / 2;
-          const y = (pageHeight - imgHeight) / 2;
-          
-          pdf.addImage(imgUrl, 'PNG', x, y, imgWidth, imgHeight);
-        }
-      }
-      
+      const imgData = canvas.toDataURL('image/png'); const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width; const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight); const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      pdf.addImage(imgData, 'PNG', imgX, 0, imgWidth * ratio, imgHeight * ratio);
       const nomeArquivo = `Checklist_Expedicao_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "_")}.pdf`;
       pdf.save(nomeArquivo);
-
     } catch (error) {
       console.error("ERRO DETALHADO AO GERAR PDF:", error);
       alert(`Ocorreu um erro ao gerar o PDF: ${error.message}\n\nVerifique o console (F12) para mais detalhes.`);
@@ -541,6 +478,7 @@
       const descriptionCell = row.cells[1];
       const description = descriptionCell ? descriptionCell.textContent.trim() : 'Descrição não encontrada';
 
+      // CORREÇÃO: O status padrão agora é "N/A" se nada for selecionado.
       let status = 'N/A';
       const selectableCells = row.querySelectorAll('.selectable');
       selectableCells.forEach(cell => {
