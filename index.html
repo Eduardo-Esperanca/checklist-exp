@@ -286,7 +286,6 @@
     .selectable.na::after{content:' (N/A)'; font-weight: normal;}
     .selectable{cursor:default; user-select:text; text-align:left; font-weight:normal;}
     .selectable:hover{background:none}
-    .print-value { display: block; font-weight: bold; margin-top: 5px; color: #000; }
     .selectable[data-print-value]::after { content: attr(data-print-value); display: block; font-weight: bold; color: #000; }
   }
 
@@ -360,7 +359,6 @@
               <button type="button" data-value="Não" aria-checked="false">Não</button>
             </div>
             <input type="hidden" id="val5s" value="" required />
-            <div class="print-value" id="val5s-print"></div>
             <div class="validation-message" id="5s-error">Por favor, selecione uma opção para 5S.</div>
           </div>
           <div>
@@ -870,10 +868,6 @@
       document.querySelectorAll('input[type="text"], input[type="time"], input[type="date"], textarea').forEach(input => { 
         input.setAttribute('value', input.value); 
       });
-      const val5sPrintElement = document.getElementById('val5s-print');
-      if (val5sPrintElement) { 
-        val5sPrintElement.textContent = document.getElementById('val5s').value ? `5S: ${document.getElementById('val5s').value}` : ''; 
-      }
       document.querySelectorAll('.selectable').forEach(cell => {
         if (cell.textContent === 'X') {
           const text = cell.classList.contains('sim') ? 'Sim' : cell.classList.contains('nao') ? 'Não' : cell.classList.contains('na') ? 'N/A' : '';
